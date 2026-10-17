@@ -13,3 +13,4 @@ The screenshots referenced by the main [README](../README.md) live in this folde
 | `07-daughterscrown.jpeg` | The crown image from the archive |
 | `08-cyberchef-location-decoded.png` | CyberChef decoding the location string from Money.xlsx |
 | `09-goodjobmajor-metadata.png` | GoodJobMajor.pdf metadata (author) |
+| `10-spf-fail-received-headers.png` | SPF failure and Received headers (emkei.cz to Google) |
