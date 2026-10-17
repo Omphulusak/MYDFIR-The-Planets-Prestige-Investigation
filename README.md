@@ -1,6 +1,6 @@
 # The Planet’s Prestige — Email Investigation
 
-This repository documents my investigation of **The Planet’s Prestige**, an email investigation challenge from Blue Team Labs Online.
+This repository documents my investigation of **The Planet’s Prestige**, an email investigation challenge from **Blue Team Labs** (Blue Team Labs Online).
 
 ## Investigation Report
 
@@ -10,7 +10,8 @@ A shorter, formal version of this investigation is available for SOC leads and m
 
 ## Project Information
 
-**Platform:** [Blue Team Labs Online](https://blueteamlabs.online/home/challenge/the-planets-prestige-e5beb8e545)  
+**Platform:** [Blue Team Labs](https://blueteamlabs.online/home/challenge/the-planets-prestige-e5beb8e545)  
+**Challenge:** The Planet’s Prestige  
 **Project Type:** Email Investigation  
 **Status:** Documented
 
@@ -58,7 +59,7 @@ The visible sender was `billjobs[@]microapple[.]com`, while the `Reply-To` addre
 | Message-Id | `<20210126064118.1993E221F8@localhost>` |
 | Date (sent) | Tue, 26 Jan 2021 01:41:18 -0500 (EST) |
 
-The `Message-Id` ends in `@localhost`, which is typical of a script or mailer service rather than a real mail server. The `Date` header is set by the sender, so it is treated as the claimed send time.
+The `Message-Id` ends in `@localhost`, which is typical of a script or mailer service rather than a real mail server.
 
 <details>
 <summary><strong>▶ Click to expand: Email-header evidence</strong></summary>
@@ -66,6 +67,27 @@ The `Message-Id` ends in `@localhost`, which is typical of a script or mailer se
 The raw headers show the sender, the `Reply-To` mismatch, and the multipart MIME boundary.
 
 ![Email headers showing the Reply-To mismatch](images/01-email-headers.png)
+
+</details>
+
+#### SPF authentication failure
+
+The email **failed SPF authentication**. Google’s receiving server recorded `spf=fail`, stating that the domain of `billjobs[@]microapple[.]com` does **not designate `93.99.104.210` as a permitted sender**. In other words, the sending IP was not authorized to send mail for the domain the message claimed to come from. The result appears in the `Authentication-Results`, `ARC-Authentication-Results` and `Received-SPF` headers.
+
+#### Received chain
+
+The `Received` headers, read from the bottom up, show how the message travelled:
+
+1. `by localhost (Postfix, from userid 33)`, queue id `1993E221F8`, Tue, 26 Jan 2021 01:41:18 -0500 (EST). The message was created on the mailer’s own server. Postfix queue id `1993E221F8` matches the one in the `Message-Id`.
+2. `from localhost (emkei.cz. [93.99.104.210])` delivered the message to `mx.google.com` over ESMTPS (TLS 1.2) for `themajoronearth[@]gmail[.]com`.
+3. Google stamped it **Mon, 25 Jan 2021 22:41:18 -0800 (PST)**, which is **06:41:18 UTC on 26 Jan 2021**. This matches the sender’s `Date` header (01:41:18 -0500 = 06:41:18 UTC).
+
+The `Return-Path` was `billjobs[@]microapple[.]com`, the same spoofed sender.
+
+<details>
+<summary><strong>▶ Click to expand: SPF failure and Received headers</strong></summary>
+
+![SPF failure and Received headers showing emkei.cz delivering from 93.99.104.210](images/10-spf-fail-received-headers.png)
 
 </details>
 
@@ -173,6 +195,7 @@ The decoded string is the location: `The Martian Colony, Beside Interplanetary S
 
 ### 6. Findings Summary
 
+- The email **failed SPF**: `93.99.104.210` is not a permitted sender for `microapple[.]com`.
 - The sender address was spoofed using the free mailer **emkei[.]cz**, with a mismatched `Reply-To` pointing to `pashter[.]com`.
 - The ransom demand was a decoy.
 - The attachment was a ZIP archive disguised as a PDF.
@@ -193,7 +216,7 @@ The decoded string is the location: `The Martian Colony, Beside Interplanetary S
 
 ## Conclusion
 
-The email was malicious. It used sender spoofing, a mismatched Reply-To, a misleading file extension, and Base64-encoded content to conceal the attacker’s real intent.
+The email was malicious. It used sender spoofing (confirmed by an SPF failure), a mismatched Reply-To, a misleading file extension, and Base64-encoded content to conceal the attacker’s real intent.
 
 By analyzing the raw email, decoding Base64 content, verifying the attachment’s file signature, and examining the recovered files, I identified the location the attacker disclosed:
 
