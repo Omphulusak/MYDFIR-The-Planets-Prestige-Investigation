@@ -1,101 +1,202 @@
-# The Planet's Prestige: Email Investigation
+# The Planet’s Prestige — Email Investigation
 
-Digital forensics / phishing analysis write-up for the **Blue Team Labs Online** challenge *The Planet's Prestige*.
+This repository documents my investigation of **The Planet’s Prestige**, an email investigation challenge from Blue Team Labs Online.
 
-> **Scenario:** CoCanDa, "The Heaven of the Universe", is suffering a wave of unexplained abductions of its citizens (CoCanDians). The Planetary President's daughter has also disappeared. On the third day, the CoCanDa representative, an Army Major on Earth, receives an email.
+## Investigation Report
 
----
+A shorter, formal version of this investigation is available for SOC leads and managers.
 
-## Tools used
+[View the formal investigation report](Report.md)
 
-- Notepad++ (raw `.eml` inspection)
-- CyberChef (Base64 decoding, hex conversion)
-- Gary Kessler's file signature table (magic bytes)
-- AbuseIPDB and VirusTotal (reputation checks)
-- Metadata viewer (PDF author, hash)
+## Project Information
 
----
+**Platform:** [Blue Team Labs Online](https://blueteamlabs.online/home/challenge/the-planets-prestige-e5beb8e545)  
+**Project Type:** Email Investigation  
+**Status:** Documented
 
-## Investigation summary
+## Objective
 
-The Major received an email that appeared to come from `billjobs@microapple[.]com`, but the `Reply-To` address was `negeja3921@pashter[.]com`. The email was sent through **emkei[.]cz**, a free fake-mailer service (server IP `93.99.104.210`, Prague, Czechia), which explains the spoofed sender.
+The objective of this investigation is to analyze the provided email evidence, identify suspicious activity and indicators of compromise, and determine what occurred based on the available artifacts.
 
-The Base64-encoded body is a ransom demand for **1 Billion CoCanDs**, claiming the abducted CoCanDians and the President's daughter are safe at a secret location. It tells the Major to solve a puzzle in the attachment and hints "Don't Trust Your Eyes".
+## Scenario
 
-The attachment `PuzzleToCoCanDa.pdf` is **not a PDF**. Its Base64 begins with `UEsDBBQA`, which decodes to `50 4B 03 04` (ZIP magic bytes). Extracting it reveals three files:
+CoCanDa, a planet known as “The Heaven of the Universe”, has suffered a series of riots caused by the frequent abduction of citizens (CoCanDians) by a mysterious force. After a war-room meeting of leaders, the Planetary President learned that his daughter had also disappeared.
 
-1. `GoodJobMajor.pdf` says the CoCanDians are "safe", points to `DaughtersCrown` as proof, and says the payment location is in `Money.xlsx`.
-2. `DaughtersCrown.jpeg` is a crown emoji image presented as "proof".
-3. `Money.xlsx` contains the real message: the ransom was a decoy and the actual intent is **war with the CoCanDians**. A hidden Base64 string decodes to the location **"The Martian Colony, Beside Interplanetary Spaceport."**
+Two days later there was still no ransom demand and no clue about the whereabouts of the missing people. On the third day, a CoCanDa representative serving as an Army Major on Earth received a suspicious email.
 
-The PDF author metadata (**Pestero Negeja**) matches the `negeja3921@pashter[.]com` Reply-To, which ties the document to the sender.
+The investigation begins with an analysis of that email to determine whether it contains information connected to the disappearances.
 
----
+## Tools Used
 
-## Email header evidence
+- Notepad++
+- CyberChef
+- Gary Kessler’s File Signature Database
+- VirusTotal
+- AbuseIPDB
+- Document metadata viewer
+
+## Investigation Process
+
+### 1. Initial Review
+
+The provided evidence was an `.eml` file. I opened it in Notepad++ to review the raw email contents, including the headers, MIME structure, encoded message body, and attachment information.
+
+The email was a multipart MIME message (`multipart/mixed`) containing a Base64-encoded plain-text body and an attachment.
+
+### 2. Email Header Analysis
+
+The visible sender was `billjobs[@]microapple[.]com`, while the `Reply-To` address was `negeja3921[@]pashter[.]com`. Replies would therefore go to a different domain than the one the message claimed to come from.
 
 | Field | Value |
 |---|---|
-| To | `themajoronearth@gmail[.]com` |
+| To | `themajoronearth[@]gmail[.]com` |
 | Subject | A Hope to CoCanDa |
-| From | "Bill" `billjobs@microapple[.]com` |
-| Errors-To | `billjobs@microapple[.]com` |
-| Reply-To | `negeja3921@pashter[.]com` |
-| X-Priority / Importance | 3 (Normal) / Normal |
-| MIME-version | 1.0 |
+| From | “Bill” `billjobs[@]microapple[.]com` |
+| Errors-To | `billjobs[@]microapple[.]com` |
+| Reply-To | `negeja3921[@]pashter[.]com` |
 | Content-Type | `multipart/mixed; boundary=BOUND_600FB98E0DCEE8.49207210` |
 | Message-Id | `<20210126064118.1993E221F8@localhost>` |
-| Date (sent) | Tue, 26 Jan 2021 01:41:18 -0500 (EST) = 06:41:18 UTC |
+| Date (sent) | Tue, 26 Jan 2021 01:41:18 -0500 (EST) |
 
-The `Date` header is set by the sender. emkei lets the sender choose it, so treat it as the claimed send time, not a verified one.
+The `Message-Id` ends in `@localhost`, which is typical of a script or mailer service rather than a real mail server. The `Date` header is set by the sender, so it is treated as the claimed send time.
 
----
+<details>
+<summary><strong>▶ Click to expand: Email-header evidence</strong></summary>
 
-## Indicators of Compromise (IOCs)
+The raw headers show the sender, the `Reply-To` mismatch, and the multipart MIME boundary.
+
+![Email headers showing the Reply-To mismatch](images/01-email-headers.png)
+
+</details>
+
+#### Sending infrastructure
+
+The message was sent through **emkei[.]cz**, a free online fake-mailer service. The sending IP, `93.99.104.210`, resolves to FinalTek (Prague, Czechia). This IP identifies the mailer service, not the attacker’s own machine.
+
+- VirusTotal flagged `emkei[.]cz` as malicious/phishing by 6 of 92 vendors.
+- AbuseIPDB lists 28 reports for `93.99.104.210` but a 0% confidence score, because the most recent report is about two months old.
+
+<details>
+<summary><strong>▶ Click to expand: Reputation checks</strong></summary>
+
+VirusTotal result for `emkei[.]cz`:
+
+![VirusTotal result for emkei.cz](images/02-emkei-virustotal.png)
+
+AbuseIPDB result for `93.99.104.210`:
+
+![AbuseIPDB result for the sender IP](images/03-abuseipdb-sender-ip.png)
+
+</details>
+
+### 3. Email Body Analysis
+
+The plain-text body was Base64-encoded. I decoded it in CyberChef using the `From Base64` operation.
+
+The decoded message is addressed to “TheMajorOnEarth” and claims the abducted CoCanDians, including the President’s daughter, are safe in a secret location. It demands **1 Billion CoCanDs** in cash, to be delivered with a spaceship, and tells the Major to solve the puzzle in the attachment. It also gives a hint: **“Don’t Trust Your Eyes.”**
+
+<details>
+<summary><strong>▶ Click to expand: Decoded email body</strong></summary>
+
+![CyberChef decoding the Base64 email body](images/04-cyberchef-decoded-body.png)
+
+</details>
+
+### 4. Attachment Analysis
+
+The raw email contained an attachment named `PuzzleToCoCanDa.pdf`. Its MIME headers declared `application/pdf` with Base64 transfer encoding.
+
+The Base64 data begins with `UEsDBBQA`, which decodes to the bytes `50 4B 03 04`. Gary Kessler’s file-signature reference identifies this as a **ZIP** archive, while a real PDF would begin with `25 50 44 46` (`%PDF`).
+
+#### Attachment Findings
+
+- **Declared filename:** `PuzzleToCoCanDa.pdf`
+- **Declared content type:** `application/pdf`
+- **Transfer encoding:** Base64
+- **Observed file signature:** `50 4B 03 04`
+- **Identified file type:** ZIP archive
+- **Finding:** the attachment’s actual file type did not match its `.pdf` extension or declared MIME type.
+
+<details>
+<summary><strong>▶ Click to expand: Attachment MIME data and signature</strong></summary>
+
+The attachment’s MIME headers and the start of its Base64 content:
+
+![Attachment MIME headers and Base64 content](images/05-raw-mime-attachment.png)
+
+The Base64 prefix `UEsDBBQA` (the ZIP signature) highlighted in CyberChef:
+
+![CyberChef showing the attachment signature](images/06-cyberchef-attachment-signature.png)
+
+</details>
+
+### 5. Extracted File Analysis
+
+Extracting the archive produced three files: `GoodJobMajor.pdf`, `DaughtersCrown.jpeg` and `Money.xlsx`.
+
+#### GoodJobMajor.pdf
+
+The PDF states that the CoCanDians are safe, says the proof is in the file named `DaughtersCrown`, and says the location to send 1 Billion CoCanDs is in `Money.xlsx`.
+
+The PDF metadata lists the **Author** as `Pestero Negeja` and the producer as `Skia/PDF m90`. This name matches the `negeja3921` Reply-To address and ties the document to the sender.
+
+<details>
+<summary><strong>▶ Click to expand: GoodJobMajor.pdf metadata</strong></summary>
+
+![GoodJobMajor.pdf metadata showing the author](images/09-goodjobmajor-metadata.png)
+
+</details>
+
+#### DaughtersCrown.jpeg
+
+The image shows a crown emoji. The PDF presents it as “proof”, but nothing in it ties it to the missing persons. It reads as a prop in the puzzle.
+
+<details>
+<summary><strong>▶ Click to expand: DaughtersCrown image</strong></summary>
+
+![DaughtersCrown.jpeg](images/07-daughterscrown.jpeg)
+
+</details>
+
+#### Money.xlsx
+
+The workbook reveals the attacker’s real message: *whatever has been seen or read until now is fake, the intention was not money, and this is the beginning of the war with the CoCanDians.* It also contains a Base64 string that I decoded in CyberChef.
+
+The decoded string is the location: `The Martian Colony, Beside Interplanetary Spaceport.`
+
+<details>
+<summary><strong>▶ Click to expand: Base64 decoding of the location</strong></summary>
+
+![CyberChef decoding the location from Money.xlsx](images/08-cyberchef-location-decoded.png)
+
+</details>
+
+### 6. Findings Summary
+
+- The sender address was spoofed using the free mailer **emkei[.]cz**, with a mismatched `Reply-To` pointing to `pashter[.]com`.
+- The ransom demand was a decoy.
+- The attachment was a ZIP archive disguised as a PDF.
+- `Money.xlsx` revealed that the true intent was war with the CoCanDians, and hid the location in Base64.
+- The PDF author, `Pestero Negeja`, matches the Reply-To mailbox.
+
+## Indicators of Compromise
 
 | Type | Value |
 |---|---|
-| Spoofed sender | `billjobs@microapple[.]com` |
-| Reply-To / actor | `negeja3921@pashter[.]com` |
+| Spoofed sender | `billjobs[@]microapple[.]com` |
+| Reply-To / actor | `negeja3921[@]pashter[.]com` |
 | Mail service | `emkei[.]cz` / `93.99.104.210` |
 | Attachment | `PuzzleToCoCanDa.pdf` (actually a zip) |
 | Contents | `GoodJobMajor.pdf`, `Money.xlsx`, `DaughtersCrown.jpeg` |
 | Hidden location | Base64 in `Money.xlsx` |
+| `GoodJobMajor.pdf` SHA-256 | `ff61467a025529020b55685df1102b44e28310aa79cd3ef2ea6a93af9477480b` |
 
-**Additional notes**
+## Conclusion
 
-- `GoodJobMajor.pdf` SHA-256: `ff61467a025529020b55685df1102b44e28310aa79cd3ef2ea6a93af9477480b`
-- `93.99.104.210` is infrastructure belonging to the mail service (ISP: FinalTek, Prague), not the attacker's own host. AbuseIPDB shows 28 reports and a 0% confidence score.
-- `emkei[.]cz` was flagged as malicious/phishing by 6/92 vendors on VirusTotal.
+The email was malicious. It used sender spoofing, a mismatched Reply-To, a misleading file extension, and Base64-encoded content to conceal the attacker’s real intent.
 
----
+By analyzing the raw email, decoding Base64 content, verifying the attachment’s file signature, and examining the recovered files, I identified the location the attacker disclosed:
 
-## 5Ws and How
+`The Martian Colony, Beside Interplanetary Spaceport.`
 
-- **Who:** the Army Major on Earth (target); the sender operating as "Pestero Negeja" (actor).
-- **What:** received a spoofed email containing a ransom demand and a disguised zip attachment.
-- **When:** header date Tue, 26 Jan 2021 01:41:18 -0500 (EST).
-- **Where:** delivered to `themajoronearth@gmail[.]com`.
-- **Why:** the ransom was a decoy. `Money.xlsx` reveals the true intent, a declaration of war on CoCanDians.
-- **How:** the actor used emkei[.]cz to spoof `billjobs@microapple[.]com`, with a zip disguised as a `.pdf` containing a PDF, an image and a spreadsheet with hidden Base64 content.
-
----
-
-## Recommendations
-
-1. **Do not pay the ransom.** It is a decoy.
-2. Treat the "rescue" location as possible bait (the actor says they will be there too). Verify before sending a retrieval team.
-3. Preserve the original `.eml` as evidence and do not reply to the Reply-To address.
-4. Block and alert on `pashter[.]com`, `microapple[.]com` and `emkei[.]cz` at the mail gateway and write network detections for traffic involving them.
-5. Quarantine mail whose file extension does not match the real file type (magic bytes check).
-6. Flag attachments that contain Base64-encoded strings or hidden content in Office documents.
-
----
-
-## Lessons learned
-
-- Always read the raw headers: compare `From`, `Reply-To`, `Errors-To` and `Message-Id`.
-- Never trust file extensions. Check magic bytes (`UEsDBBQA` in Base64 = `PK\x03\x04`).
-- Check the XML inside Office files (`xl/sharedStrings.xml`) for hidden text.
-- Defang IOCs before sharing (`example[.]com`).
-- A sender's IP in a header from a fake-mailer service identifies the service, not the attacker.
+Because the attacker states they will also be at that location, it should be verified before any rescue team is dispatched.
