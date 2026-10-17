@@ -12,8 +12,9 @@ A shorter, formal version of this investigation is available for SOC leads and m
 
 **Platform:** [Blue Team Labs](https://blueteamlabs.online/home/challenge/the-planets-prestige-e5beb8e545)  
 **Challenge:** The Planet’s Prestige  
+**Category / Difficulty:** CTF / Easy  
 **Project Type:** Email Investigation  
-**Status:** Documented
+**Status:** Completed (October 2, 2026)
 
 ## Objective
 
@@ -223,3 +224,9 @@ By analyzing the raw email, decoding Base64 content, verifying the attachment’
 `The Martian Colony, Beside Interplanetary Spaceport.`
 
 Because the attacker states they will also be at that location, it should be verified before any rescue team is dispatched.
+
+## Challenge Completion
+
+I completed **The Planet’s Prestige** on **October 2, 2026** (Blue Team Labs Online, CTF category, Easy difficulty, 10 points).
+
+![Blue Team Labs Online completion badge for The Planet's Prestige](images/11-challenge-completion.png)
